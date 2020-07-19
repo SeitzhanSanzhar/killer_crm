@@ -11,6 +11,9 @@ class Victim(models.Model):
     difficulty = models.IntegerField()
     priority = models.IntegerField()
 
+    def __str__(self):
+        return self.username
+
 
 class Link(models.Model):
     pre_victim = models.ForeignKey(Victim, related_name='pre_victim', on_delete=models.CASCADE)
@@ -77,6 +80,7 @@ class KillerManager(models.Model):
                     Link.objects.get(post_victim=post_victim)
                 except models.ObjectDoesNotExist:
                     targets_q.put([int(link.post_victim.priority), link.post_victim])
+        start_date = self.start_of_work_time
         total_hours = 0
         for x in order:
             total_hours += per_target_hours[x]
@@ -87,4 +91,12 @@ class KillerManager(models.Model):
             killed_target.save()
             self.start_of_work_time = current_time
             self.save()
+        end_date = self.start_of_work_time
+        order_response = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'order': order,
+            'hours': total_hours
+        }
         print (total_hours)
+        return order_response
