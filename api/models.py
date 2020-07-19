@@ -15,6 +15,25 @@ class Contract(models.Model):
     def append_victim(self, victim):
         ContractToVictim.objects.create(contract=self, victim=victim)
 
+    def pay(self, amount):
+        res = {}
+        res['result'] = 'failed'
+        res['comment'] = ''
+        if (self.payed):
+            res['comment'] = 'already payed'
+        if (self.amount == None):
+            res['comment'] = 'no amount yet'
+            return res
+        if (amount == self.amount):
+            res['result'] = 'success'
+            self.payed = True
+            self.save()
+        elif (amount < self.amount):
+            res['comment'] = 'not enough credit'
+        elif (amount > self.amount):
+            res['comment'] = 'too much credit'
+        return res
+
 class Victim(models.Model):
     time_of_death = models.DateTimeField(null=True)
     username = models.CharField(max_length=250)

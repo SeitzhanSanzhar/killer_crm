@@ -1,11 +1,31 @@
-from django.shortcuts import render
-from xml.etree import cElementTree as ElementTree
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
-from api.models import KillerManager
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListAPIView
+from api.models import KillerManager, Contract
 from rest_framework.views import APIView
+from api.serializers import ContractSerializer
+import json
 import xmltodict
+
+
+class ContractListView(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ContractSerializer
+
+    def get(self, request):
+        user = request.user
+        res = []
+        queryset = Contract.objects.filter(user=user)
+        for contract in queryset:
+            res.append(ContractSerializer(contract).data)
+        return JsonResponse(res, safe=False)
+
+    def post(self, request):
+        json_body = json.loads(request.body)
+        contract_id = json_body['contract_id']
+        amount = json_body['amount']
+        contract = Contract.objects.get(id = contract_id)
+        return JsonResponse(contract.pay(amount), safe=False)
 
 
 class PurchaseRequestHandler(APIView):
