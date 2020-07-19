@@ -1,5 +1,7 @@
-Solution: basically I just keep PriorityQueue to every time extract most prior target, after I'm seeing is there any new targets can be added to PQ and repeating all this while I have something in my PQ
+Solution: basically I just keep PriorityQueue to every time extract most prior target, after I see is there any new targets can be added to PQ and then I repeat this steps while I have something in my PQ
  
+Dockerfiles can be found in this repo
+
 
 purchase_request/ - requires xml file with targets information, returns json in the statement if success otherwise failure reason
 
