@@ -4,8 +4,6 @@ from django.contrib.auth.models import User
 from django.db import models
 from queue import PriorityQueue
 
-# Create your models here.
-
 
 class Contract(models.Model):
     payed = models.BooleanField(default=False)
@@ -16,6 +14,13 @@ class Contract(models.Model):
 
     def append_victim(self, victim):
         ContractToVictim.objects.create(contract=self, victim=victim)
+
+    def get_victim_list(self):
+        contract_to_victims = ContractToVictim.objects.filter(contract=self)
+        victim_list = []
+        for x in contract_to_victims:
+            victim_list.append(x.victim)
+        return victim_list
 
     def pay(self, amount):
         res = {}
@@ -37,12 +42,10 @@ class Contract(models.Model):
             res['comment'] = 'too much credit'
         return res
 
-    def to_json(self):
-        res = {}
 
 class Victim(models.Model):
     time_of_death = models.DateTimeField(null=True)
-    username = models.CharField(max_length=250)
+    username = models.CharField(max_length=250, unique=True)
     age = models.IntegerField()
     difficulty = models.IntegerField()
     priority = models.IntegerField()
@@ -76,12 +79,8 @@ class KillerManager(models.Model):
         return obj
 
     def process_order(self, target_list, user):
-        contract = Contract.objects.create(user = user)
-        victims = Victim.objects.all()
-        links = Link.objects.all()
-        for x in victims: x.delete()
-        for x in links: x.delete()
 
+        contract = Contract.objects.create(user=user)
         per_target_hours = {}
         target_list = sorted(target_list, key=lambda x: int(x['priority']), reverse=True)
         target_orm = []
@@ -91,6 +90,8 @@ class KillerManager(models.Model):
                 res = {'result': 'failed', 'reason': 'cant process own client'}
                 return res
             except models.ObjectDoesNotExist:
+                if (Victim.objects.filter(username=target['username']).first() != None):
+                            return {'result': 'failed', 'reason': 'recheck the targets, it contains targets which where murdered or duplicates'}
                 new_victim = Victim.objects.create(username = target['username'], age = int(target['age']),
                               difficulty = int(target['difficulty']), priority = int(target['priority']))
                 target_orm.append(new_victim)
@@ -109,7 +110,9 @@ class KillerManager(models.Model):
                 per_target_hours[target['link']] *= 2 if post_victim.age >= 40 else 1.5
                 was_multiplied[target['link']] = True
             Link.objects.create(pre_victim=pre_victim,post_victim=post_victim)
+
         # here I'm just using PriorityQueue to every time get target with most priority
+
         targets_q = PriorityQueue()
         for target in target_orm:
             link = Link.objects.filter(post_victim = target).first()

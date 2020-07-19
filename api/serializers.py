@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from api.models import Contract, User
+from api.models import User, Victim, Contract
+
+class VictimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Victim
+        fields = '__all__'
 
 class ContractSerializer(serializers.ModelSerializer):
     class Meta:
