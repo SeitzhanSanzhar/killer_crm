@@ -1,4 +1,5 @@
 import datetime
+from django.forms.models import model_to_dict
 from django.contrib.auth.models import User
 from django.db import models
 from queue import PriorityQueue
@@ -21,10 +22,10 @@ class Contract(models.Model):
         res['comment'] = ''
         if (self.payed):
             res['comment'] = 'already payed'
-        if (self.amount == None):
+        elif (self.amount == None):
             res['comment'] = 'no amount yet'
             return res
-        if (amount == self.amount):
+        elif (amount == self.amount):
             res['result'] = 'success'
             self.payed = True
             self.save()
@@ -33,6 +34,9 @@ class Contract(models.Model):
         elif (amount > self.amount):
             res['comment'] = 'too much credit'
         return res
+
+    def to_json(self):
+        res = {}
 
 class Victim(models.Model):
     time_of_death = models.DateTimeField(null=True)
@@ -84,7 +88,7 @@ class KillerManager(models.Model):
                           difficulty = int(target['difficulty']), priority = int(target['priority']))
             target_orm.append(new_victim)
             contract.append_victim(new_victim)
-
+        was_multiplied = {}
         for target in target_list:
             pre_victim = Victim.objects.filter(username=target['username']).first()
             post_victim = Victim.objects.filter(username=target['link']).first()
@@ -94,7 +98,9 @@ class KillerManager(models.Model):
                 continue
             if target['link'] not in per_target_hours:
                 per_target_hours[target['link']] = int(post_victim.difficulty)
-            per_target_hours[target['link']] *= 2 if pre_victim.age >= 40 else 1.5
+            if (target['link'] not in was_multiplied):
+                per_target_hours[target['link']] *= 2 if post_victim.age >= 40 else 1.5
+                was_multiplied[target['link']] = True
             Link.objects.create(pre_victim=pre_victim,post_victim=post_victim)
 
         targets_q = PriorityQueue()
