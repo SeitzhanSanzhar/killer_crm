@@ -6,14 +6,14 @@ from queue import PriorityQueue
 # Create your models here.
 
 
-class Order(models.Model):
+class Contract(models.Model):
     payed = models.BooleanField(default=False)
     amount = models.IntegerField(null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
 
     def append_victim(self, victim):
-        OrdertoVictim.objects.create(order=self, victim=victim)
+        ContractToVictim.objects.create(contract=self, victim=victim)
 
 class Victim(models.Model):
     time_of_death = models.DateTimeField(null=True)
@@ -25,8 +25,8 @@ class Victim(models.Model):
     def __str__(self):
         return self.username
 
-class OrdertoVictim(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+class ContractToVictim(models.Model):
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
     victim = models.ForeignKey(Victim, on_delete=models.CASCADE)
 
 class Link(models.Model):
@@ -51,7 +51,7 @@ class KillerManager(models.Model):
         return obj
 
     def process_order(self, target_list, user):
-        purchase_order = Order.objects.create(user = user)
+        contract = Contract.objects.create(user = user)
         victims = Victim.objects.all()
         links = Link.objects.all()
         for x in victims: x.delete()
@@ -64,7 +64,7 @@ class KillerManager(models.Model):
             new_victim = Victim.objects.create(username = target['username'], age = int(target['age']),
                           difficulty = int(target['difficulty']), priority = int(target['priority']))
             target_orm.append(new_victim)
-            purchase_order.append_victim(new_victim)
+            contract.append_victim(new_victim)
 
         for target in target_list:
             pre_victim = Victim.objects.filter(username=target['username']).first()
@@ -114,7 +114,7 @@ class KillerManager(models.Model):
             'hours': total_hours
         }
         amount = len(target_orm) * 10 * total_hours
-        purchase_order.amount = amount
-        purchase_order.save()
+        contract.amount = amount
+        contract.save()
         print (total_hours)
         return order_response
