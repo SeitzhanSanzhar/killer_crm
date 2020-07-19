@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from queue import PriorityQueue
 
@@ -43,14 +44,15 @@ class KillerManager(models.Model):
         target_list = sorted(target_list, key=lambda x: int(x['priority']), reverse=True)
         target_orm = []
         for target in target_list:
-            new_victim = Victim.objects.create(username = target['username'], age = target['age'],
-                          difficulty = target['difficulty'], priority = target['priority'])
+            new_victim = Victim.objects.create(username = target['username'], age = int(target['age']),
+                          difficulty = int(target['difficulty']), priority = int(target['priority']))
             target_orm.append(new_victim)
 
         for target in target_list:
             pre_victim = Victim.objects.filter(username=target['username']).first()
             post_victim = Victim.objects.filter(username=target['link']).first()
-            per_target_hours[target['username']] = int(target['difficulty'])
+            if (target['username'] not in per_target_hours):
+                per_target_hours[target['username']] = int(target['difficulty'])
             if (post_victim == None):
                 continue
             if target['link'] not in per_target_hours:
@@ -63,9 +65,7 @@ class KillerManager(models.Model):
             link = Link.objects.filter(post_victim = target).first()
             if (link == None):
                 targets_q.put([int(target.priority), target])
-
         order = []
-
         while (not targets_q.empty()):
             top_target = targets_q.get()
             order.append(top_target[1].username)
@@ -79,5 +79,12 @@ class KillerManager(models.Model):
                     targets_q.put([int(link.post_victim.priority), link.post_victim])
         total_hours = 0
         for x in order:
-            print (x, per_target_hours[x])
-        # 2 + (1.5 * 1) + 1 + (2 * 10) + (2 * 3)
+            total_hours += per_target_hours[x]
+            current_time = self.start_of_work_time
+            current_time += datetime.timedelta(hours=per_target_hours[x])
+            killed_target = Victim.objects.get(username=x)
+            killed_target.time_of_death = current_time
+            killed_target.save()
+            self.start_of_work_time = current_time
+            self.save()
+        print (total_hours)
