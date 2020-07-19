@@ -12,6 +12,7 @@ class Contract(models.Model):
     amount = models.IntegerField(null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
+    payment_time = models.DateTimeField(null=True)
 
     def append_victim(self, victim):
         ContractToVictim.objects.create(contract=self, victim=victim)
@@ -28,6 +29,7 @@ class Contract(models.Model):
         elif (amount == self.amount):
             res['result'] = 'success'
             self.payed = True
+            self.payment_time = datetime.datetime.now()
             self.save()
         elif (amount < self.amount):
             res['comment'] = 'not enough credit'
@@ -84,10 +86,15 @@ class KillerManager(models.Model):
         target_list = sorted(target_list, key=lambda x: int(x['priority']), reverse=True)
         target_orm = []
         for target in target_list:
-            new_victim = Victim.objects.create(username = target['username'], age = int(target['age']),
-                          difficulty = int(target['difficulty']), priority = int(target['priority']))
-            target_orm.append(new_victim)
-            contract.append_victim(new_victim)
+            try:
+                user = User.objects.get(username=target['username'])
+                res = {'result': 'failed', 'reason': 'cant process own client'}
+                return res
+            except models.ObjectDoesNotExist:
+                new_victim = Victim.objects.create(username = target['username'], age = int(target['age']),
+                              difficulty = int(target['difficulty']), priority = int(target['priority']))
+                target_orm.append(new_victim)
+                contract.append_victim(new_victim)
         was_multiplied = {}
         for target in target_list:
             pre_victim = Victim.objects.filter(username=target['username']).first()
@@ -102,7 +109,7 @@ class KillerManager(models.Model):
                 per_target_hours[target['link']] *= 2 if post_victim.age >= 40 else 1.5
                 was_multiplied[target['link']] = True
             Link.objects.create(pre_victim=pre_victim,post_victim=post_victim)
-
+        # here I'm just using PriorityQueue to every time get target with most priority
         targets_q = PriorityQueue()
         for target in target_orm:
             link = Link.objects.filter(post_victim = target).first()
